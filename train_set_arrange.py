@@ -28,18 +28,6 @@ import plotly.graph_objs as go
 import plotly.tools as tls
 import pandas as pd
 
-#NNS
-from NeuralNetwork import MLP
-
-"""
-Feature extraction algorithm:
-1. Resampling  V
-2. VAD and silence removal  V
-3. (Maybe padding with 0 to make signals be equal length)  X
-4. Compute Mel Power Spectrogram  V
-5. Features normalization with mean V
-"""
-
 #1. Resampling at 8 KHz instead of 16 KHz frequency
 def resample(path):
     new_sample_rate = 8000;
@@ -63,6 +51,7 @@ def read_wave(path):
         pcm_data = wf.readframes(wf.getnframes())
         return pcm_data, sample_rate
 
+#Used to write the .wav file once eliminated the silent frames
 def write_wave(path, audio, sample_rate):
     """Writes a .wav file.
     Takes path, PCM audio data, and sample rate.
@@ -133,7 +122,6 @@ def vad_collector(sample_rate, frame_duration_ms,
     for frame in frames:
         is_speech = vad.is_speech(frame.bytes, sample_rate)
 
-        #sys.stdout.write('1' if is_speech else '0')
         if not triggered:
             ring_buffer.append((frame, is_speech))
             num_voiced = len([f for f, speech in ring_buffer if speech])
@@ -142,7 +130,6 @@ def vad_collector(sample_rate, frame_duration_ms,
             # TRIGGERED state.
             if num_voiced > 0.9 * ring_buffer.maxlen:
                 triggered = True
-                #sys.stdout.write('+(%s)' % (ring_buffer[0][0].timestamp,))
                 # We want to yield all the audio we see from now until
                 # we are NOTTRIGGERED, but we have to start with the
                 # audio that's already in the ring buffer.
@@ -159,7 +146,6 @@ def vad_collector(sample_rate, frame_duration_ms,
             # unvoiced, then enter NOTTRIGGERED and yield whatever
             # audio we've collected.
             if num_unvoiced > 0.9 * ring_buffer.maxlen:
-                #sys.stdout.write('-(%s)' % (frame.timestamp + frame.duration))
                 triggered = False
                 yield b''.join([f.bytes for f in voiced_frames])
                 ring_buffer.clear()
@@ -188,3 +174,5 @@ def vad_applier():
                 for i, segment in enumerate(segments):
                     os.remove(path) #remove non optimized trace
                     write_wave(path, segment, sample_rate) #Save the frames as a new tape
+                    
+vad_applier()
