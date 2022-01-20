@@ -33,6 +33,7 @@ from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 from tensorflow.keras.callbacks import Callback
 from keras.regularizers import l1
+import seaborn as sn
 
 batch_size = 64
 num_classes = 30
@@ -147,3 +148,41 @@ plt.legend(loc='upper right')
 plt.title('Training and Validation Loss')
 plt.show()
 plt.savefig('img3')
+
+
+
+
+#Collecting data and plotting confusion matrix
+predictions = np.array([])
+labels =  np.array([])
+for x, y in val_dataset:
+  predictions = np.concatenate([predictions, np.argmax(proj_model.predict(x), axis = -1)])
+  labels = np.concatenate([labels, np.argmax(y.numpy(), axis=-1)])
+
+CF = tf.math.confusion_matrix(labels=labels, predictions=predictions).numpy()
+
+matrix_index = ["no", "cat", "wow", "bed", "right", "happy", "go", "dog", "tree", "nine", "three", "bird", "sheila", "seven", "up", "one", "left", "zero", "stop", "on", "down", "house", "five", "yes", "two", "four", "six", "marvin", "off", "eight" ]
+
+cm_sum = np.sum(CF, axis=1, keepdims=True)
+cm_perc = CF / cm_sum.astype(float) * 100
+annot = np.empty_like(CF).astype(str)
+nrows, ncols = CF.shape
+for i in range(nrows):
+    for j in range(ncols):
+        c = CF[i, j]
+        p = cm_perc[i, j]
+        if i == j:
+            s = cm_sum[i]
+            annot[i, j] = '%.1f%%' % (p)
+        elif c == 0:
+            annot[i, j] = ''
+        else:
+            annot[i, j] = '%.1f%%\n%d' % (p, c)
+
+#annot[i, j] = '%.1f%%\n%d/%d' % (p c, s)
+#Display confusion matrix 
+df_cm = pd.DataFrame(CF, index = matrix_index, columns = matrix_index)
+df_cm.index.name = 'Actual'
+df_cm.columns.name = 'Predicted'
+fig, ax = plt.subplots(figsize=(20,20))
+sn.heatmap(df_cm, annot=annot, fmt='')
